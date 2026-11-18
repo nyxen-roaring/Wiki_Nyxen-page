@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bios y Datos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0612;--panel:#150c24;--yel:#fff200;--mag:#ff2fb3;--cyn:#33e6ff;--txt:#f4f0ff;--dim:#8d7fb0}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--txt);font-family:'VT323',monospace;font-size:24px;overflow-x:hidden;
+ background-image:radial-gradient(circle at 20% 0,#3b1260 0,transparent 55%),radial-gradient(circle at 90% 100%,#0b3a52 0,transparent 50%)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(#0000 0 2px,#0003 2px 3px)}
+h1{font:22px 'Press Start 2P',monospace;color:var(--yel);text-shadow:4px 4px 0 var(--mag);padding:22px 20px 8px;letter-spacing:1px}
+nav{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none}
+nav button{font:11px 'Press Start 2P',monospace;background:var(--panel);color:var(--dim);border:3px solid #2a1850;padding:12px 14px;cursor:pointer;white-space:nowrap}
+nav button:hover{color:var(--txt)}
+nav button[aria-selected=true]{color:#000;background:var(--yel);border-color:var(--yel);box-shadow:4px 4px 0 var(--mag)}
+main{display:grid;grid-template-columns:minmax(260px,380px) 1fr;gap:20px;padding:12px 16px 40px;max-width:1200px}
+#list{display:flex;flex-direction:column;gap:4px}
+.item{font:15px 'Press Start 2P',monospace;line-height:1.5;color:var(--dim);background:none;border:0;text-align:left;padding:12px 10px;cursor:pointer;transition:transform .12s,color .12s}
+.item:hover{color:var(--txt)}
+.item.sel{color:var(--txt);transform:translateX(18px);text-shadow:3px 3px 0 var(--mag)}
+.item.sel::before{content:"▶ ";color:var(--yel)}
+.item.locked{color:#4a3d6b}
+.item.locked.sel{color:#7a6aa6;text-shadow:3px 0 0 #f00,-3px 0 0 var(--cyn)}
+.item small{display:block;font:20px 'VT323',monospace;color:var(--dim);margin-top:2px}
+#detail{background:var(--panel);border:4px solid #2a1850;box-shadow:8px 8px 0 #000;padding:22px;min-height:340px}
+#detail h2{font:18px 'Press Start 2P',monospace;line-height:1.5;color:var(--cyn);margin-bottom:16px;text-shadow:3px 3px 0 #000}
+.datos{display:grid;grid-template-columns:auto 1fr;gap:4px 18px;margin-bottom:18px;padding:12px;background:#0006;border-left:6px solid var(--mag)}
+.datos b{color:var(--yel);font-weight:400}
+.texto{white-space:pre-wrap;line-height:1.25;max-width:70ch}
+.fecha{color:var(--mag);margin-bottom:10px}
+.vacio{color:var(--dim)}
+.sil{position:relative;width:min(260px,70%);aspect-ratio:3/4;margin:0 auto 18px;filter:drop-shadow(5px 0 0 #f004) drop-shadow(-5px 0 0 #0ff4);animation:tr .7s steps(2) infinite}
+.sil .cuerpo{position:absolute;inset:0;background:#000;transition:clip-path .08s}
+.sil .ojo{position:absolute;top:30%;width:15%;aspect-ratio:1;background:#fff;border-radius:50%;box-shadow:0 0 14px #fff}
+.sil .ojo i{position:absolute;left:50%;top:50%;width:42%;height:42%;margin:-21% 0 0 -21%;background:#000;border-radius:50%}
+.sil .ojo:nth-child(2){left:26%}.sil .ojo:nth-child(3){right:26%}
+.sil .barra{position:absolute;left:-8%;right:-8%;height:7%;background:#000;mix-blend-mode:difference;animation:bar 1.3s steps(5) infinite}
+@keyframes tr{0%{transform:translate(0)}25%{transform:translate(-4px,2px)}50%{transform:translate(3px,-2px) skewX(2deg)}75%{transform:translate(-2px,-3px)}}
+@keyframes bar{0%{top:10%}20%{top:70%}40%{top:35%}60%{top:88%}80%{top:20%}100%{top:55%}}
+.aviso{color:var(--dim);font-size:20px;margin-top:14px;padding-left:20px}
+:focus-visible{outline:3px dashed var(--cyn);outline-offset:3px}
+@media(max-width:760px){main{grid-template-columns:1fr}.item.sel{transform:translateX(8px)}h1{font-size:16px}}
+@media(prefers-reduced-motion:reduce){.sil,.sil .barra{animation:none}}
+</style>
+</head>
+<body>
+<h1 id="titulo">...</h1>
+<nav id="tabs" role="tablist" aria-label="Categorías"></nav>
+<main>
+  <section id="list" aria-label="Entradas"></section>
+  <article id="detail" aria-live="polite"></article>
+</main>
+<p class="aviso" id="pie">← → cambia de categoría · ↑ ↓ elige · Enter abre</p>
+
+<script>
+const LETRAS="ABCDEFGHIJKLMNOPQRSTUVWXYZ#@%&?!0123456789";
+const rnd=n=>Array.from({length:n},()=>LETRAS[Math.random()*LETRAS.length|0]).join("");
+const $=s=>document.querySelector(s);
+let M,cat=0,sel=0,vista=[],glitchTimer=null;
+
+// pequeño "blip" estilo FNF
+let ac;function blip(f=520){try{ac=ac||new AudioContext();const o=ac.createOscillator(),g=ac.createGain();o.type="square";o.frequency.value=f;g.gain.value=.03;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,ac.currentTime+.08);o.stop(ac.currentTime+.09)}catch(e){}}
+
+async function cargar(){
+  try{
+    M=await (await fetch("data/index.json",{cache:"no-store"})).json();
+  }catch(e){
+    $("#titulo").textContent="ERROR";
+    $("#detail").innerHTML='<p class="vacio">No se pudo leer data/index.json. Si abres el archivo directo (file://) usa un servidor local o GitHub Pages.</p>';
+    return;
+  }
+  document.title=M.titulo;$("#titulo").textContent=M.titulo;
+  // busca cada .txt: si existe se desbloquea
+  await Promise.all(M.entradas.map(async e=>{
+    try{
+      const r=await fetch(e.archivo,{cache:"no-store"});
+      e.texto=r.ok?(await r.text()).replace(/\r/g,"").trim():null;
+      if(e.texto==="")e.texto=null;
+    }catch(_){e.texto=null}
+  }));
+  pintarTabs();elegirCat(0);
+}
+
+function pintarTabs(){
+  const t=$("#tabs");t.innerHTML="";
+  M.categorias.forEach((c,i)=>{
+    const b=document.createElement("button");
+    b.role="tab";b.textContent=c.nombre;
+    b.onclick=()=>{blip(660);elegirCat(i)};
+    t.append(b);
+  });
+}
+
+function elegirCat(i){
+  cat=i;sel=0;
+  [...$("#tabs").children].forEach((b,j)=>b.setAttribute("aria-selected",j===i));
+  const id=M.categorias[i].id;
+  vista=M.entradas.filter(e=>e.cat===id);
+  if(id==="anuncios")vista.sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+  pintarLista();mostrar();
+}
+
+function pintarLista(){
+  const l=$("#list");l.innerHTML="";
+  if(!vista.length){l.innerHTML='<p class="vacio">Aún no hay entradas aquí.</p>';return}
+  vista.forEach((e,i)=>{
+    const b=document.createElement("button");
+    b.className="item"+(e.texto?"":" locked")+(i===sel?" sel":"");
+    b.dataset.i=i;
+    if(e.texto){b.textContent=e.nombre;if(e.fecha){const s=document.createElement("small");s.textContent=e.fecha;b.append(s)}}
+    else b.textContent=rnd(e.nombre.length);
+    b.onclick=()=>{blip();sel=i;pintarLista();mostrar()};
+    l.append(b);
+  });
+}
+
+function mostrar(){
+  clearInterval(glitchTimer);glitchTimer=null;
+  const d=$("#detail");d.innerHTML="";
+  const e=vista[sel];
+  if(!e){d.innerHTML='<p class="vacio">Sin contenido.</p>';return}
+  if(!e.texto){bloqueado(d,e);return}
+  const h=document.createElement("h2");h.textContent=e.nombre;d.append(h);
+  if(e.fecha){const f=document.createElement("div");f.className="fecha";f.textContent=e.fecha;d.append(f)}
+  // líneas "Clave: valor" al inicio = datos; el resto = texto
+  const lineas=e.texto.split("\n"),datos=[];
+  while(lineas.length&&/^[^:]{1,24}:\s*\S/.test(lineas[0])&&!lineas[0].startsWith("http")){
+    const [k,...v]=lineas.shift().split(":");datos.push([k.trim(),v.join(":").trim()]);
+  }
+  if(datos.length){
+    const g=document.createElement("div");g.className="datos";
+    datos.forEach(([k,v])=>{const a=document.createElement("b");a.textContent=k;const c=document.createElement("span");c.textContent=v;g.append(a,c)});
+    d.append(g);
+  }
+  const p=document.createElement("div");p.className="texto";p.textContent=lineas.join("\n").trim();d.append(p);
+}
+
+function bloqueado(d,e){
+  d.innerHTML=`<h2 id="nb"></h2>
+  <div class="sil"><div class="cuerpo"></div><div class="ojo"><i></i></div><div class="ojo"><i></i></div><div class="barra"></div></div>
+  <div class="texto" id="rt"></div>`;
+  const cuerpo=d.querySelector(".cuerpo"),nb=d.querySelector("#nb"),rt=d.querySelector("#rt");
+  const forma=()=>{ // silueta sin forma fija
+    const n=9,pts=[];
+    for(let i=0;i<n;i++){const a=i/n*Math.PI*2,r=28+Math.random()*24;
+      pts.push((50+Math.cos(a)*r*1.1).toFixed(1)+"% "+(50+Math.sin(a)*r*1.3).toFixed(1)+"%")}
+    cuerpo.style.clipPath="polygon("+pts.join(",")+")";
+  };
+  const letras=()=>{
+    nb.textContent=rnd(Math.max(6,e.nombre.length));
+    rt.textContent=Array.from({length:5},()=>rnd(18+Math.random()*26|0)).join("\n");
+  };
+  forma();letras();
+  glitchTimer=setInterval(()=>{forma();letras()},110);
+}
+
+// los ojos siguen al usuario
+const seguir=(x,y)=>{
+  document.querySelectorAll(".sil .ojo i").forEach(p=>{
+    const r=p.parentElement.getBoundingClientRect();
+    const dx=x-(r.left+r.width/2),dy=y-(r.top+r.height/2),m=Math.hypot(dx,dy)||1,k=Math.min(m,200)/200*(r.width*.28);
+    p.style.transform=`translate(${dx/m*k}px,${dy/m*k}px)`;
+  });
+};
+addEventListener("pointermove",ev=>seguir(ev.clientX,ev.clientY));
+addEventListener("touchmove",ev=>{const t=ev.touches[0];seguir(t.clientX,t.clientY)},{passive:true});
+
+addEventListener("keydown",ev=>{
+  if(!M)return;
+  if(ev.key==="ArrowDown"&&vista.length){sel=(sel+1)%vista.length}
+  else if(ev.key==="ArrowUp"&&vista.length){sel=(sel-1+vista.length)%vista.length}
+  else if(ev.key==="ArrowRight"){blip(660);return elegirCat((cat+1)%M.categorias.length)}
+  else if(ev.key==="ArrowLeft"){blip(660);return elegirCat((cat-1+M.categorias.length)%M.categorias.length)}
+  else return;
+  ev.preventDefault();blip();pintarLista();mostrar();
+});
+
+// refresca las letras aleatorias de los bloqueados en la lista
+setInterval(()=>document.querySelectorAll(".item.locked").forEach(b=>{b.textContent=rnd(b.textContent.length)}),160);
+
+cargar();
+</script>
+</body>
+</html>
