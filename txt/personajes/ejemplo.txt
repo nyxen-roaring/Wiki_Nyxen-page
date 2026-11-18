@@ -1,0 +1,8 @@
+Nombre: Ejemplo
+Edad: 17
+Altura: 1.70 m
+Cumpleaños: 1 de enero
+Canción: Tutorial
+
+Aquí va la biografía del personaje. Escribe todo el texto que quieras.
+Las líneas con "Clave: valor" arriba se muestran como datos; el resto es la historia.
