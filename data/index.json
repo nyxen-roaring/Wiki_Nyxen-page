@@ -1,0 +1,21 @@
+{
+  "titulo": "MI UNIVERSO",
+  "categorias": [
+    { "id": "lore", "nombre": "Lore (Historia)" },
+    { "id": "personajes", "nombre": "Personajes" },
+    { "id": "extras", "nombre": "Extras" },
+    { "id": "nocanon", "nombre": "No canon" },
+    { "id": "bio", "nombre": "Bio" },
+    { "id": "anuncios", "nombre": "Anuncios" }
+  ],
+  "entradas": [
+    { "cat": "lore", "nombre": "El inicio", "archivo": "txt/lore/inicio.txt" },
+    { "cat": "lore", "nombre": "La gran guerra", "archivo": "txt/lore/guerra.txt" },
+    { "cat": "personajes", "nombre": "Ejemplo", "archivo": "txt/personajes/ejemplo.txt" },
+    { "cat": "personajes", "nombre": "Personaje secreto", "archivo": "txt/personajes/secreto.txt" },
+    { "cat": "extras", "nombre": "Curiosidades", "archivo": "txt/extras/curiosidades.txt" },
+    { "cat": "nocanon", "nombre": "Crossover", "archivo": "txt/nocanon/crossover.txt" },
+    { "cat": "bio", "nombre": "Sobre el creador", "archivo": "txt/bio/creador.txt" },
+    { "cat": "anuncios", "nombre": "Bienvenidos", "fecha": "2026-11-17", "archivo": "txt/anuncios/001.txt" }
+  ]
+}
